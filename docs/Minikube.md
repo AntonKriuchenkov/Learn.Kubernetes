@@ -1,0 +1,16 @@
+# Overview
+
+[Virtual machine installation guid](./Minikube.VM.md)
+
+## Installation
+
+Install minikube
+
+```bash
+# Bash VM
+curl -LO https://github.com/kubernetes/minikube/releases/latest/download/minikube-linux-amd64
+
+sudo install minikube-linux-amd64 /usr/local/bin/minikube && rm minikube-linux-amd64
+
+minikube start --driver=docker
+```
