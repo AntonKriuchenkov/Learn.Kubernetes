@@ -181,3 +181,103 @@ Configure host docker CLI to connect VM docker through SSH
 # Create context to access VM docker
 docker context create linux-minikube --description "Docker in VM minikube" --docker "host=ssh://vbox@127.0.0.10:3022"
 ```
+
+## Install minikube
+
+[Check available releases](https://github.com/kubernetes/minikube/releases)
+
+```bash
+# Bash VM
+# For latest version use: https://github.com/kubernetes/minikube/releases/latest/download/minikube-linux-amd64
+curl -LO https://github.com/kubernetes/minikube/releases/download/v1.37.0/minikube-linux-amd64
+
+sudo install minikube-linux-amd64 /usr/local/bin/minikube && rm minikube-linux-amd64
+
+minikube version
+# Output:
+#
+# minikube version: v1.37.0
+# commit: 65318f4cfff9c12cc87ec9eb8f4cdd57b25047f3
+
+# Run to test
+minikube start --driver=docker
+```
+
+## Install kubectl
+
+The Kubernetes command-line tool, kubectl, allows you to run commands against Kubernetes clusters. You can use kubectl to deploy applications, inspect and manage cluster resources, and view logs. For more information including a complete list of kubectl operations, see the [kubectl reference documentation](https://kubernetes.io/docs/reference/kubectl/).
+
+You must use a kubectl version that is within one minor version difference of your cluster. For example, a v1.34 client can communicate with v1.33, v1.34, and v1.35 control planes. Using the latest compatible version of kubectl helps avoid unforeseen issues.
+
+[Check for lates version](https://dl.k8s.io/release/stable.txt)
+
+### (Use this) Install specific version from binaries
+
+Use version `v1.34.2`
+
+```bash
+# Bash VM
+# Download binaries
+curl -LO https://dl.k8s.io/release/v1.34.2/bin/linux/amd64/kubectl
+
+# Download checksum
+curl -LO https://dl.k8s.io/release/v1.34.2/bin/linux/amd64/kubectl.sha256
+
+# Validate checksum
+echo "$(cat kubectl.sha256)  kubectl" | sha256sum --check
+
+# Install kubectl
+sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+
+# Check installation
+
+kubectl version --client
+
+# Output:
+#
+# Client Version: v1.34.2
+# Kustomize Version: v5.7.1
+```
+
+> The 'install' command in Linux is a versatile tool used for copying files and setting their attributes, such as permissions, ownership, and group. Unlike commands like 'cp' that simply copy files, 'install' allows you to fine-tune these settings, making it ideal for installation scripts or manual file management. It can copy files to a specified destination and set permissions, ownership, or group attributes, all in one go.
+
+### (Optional) Install latest stable version
+
+```bash
+# Bash VM
+# Download binaries
+curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+
+# Download checksum
+curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl.sha256"
+
+# Validate checksum
+echo "$(cat kubectl.sha256)  kubectl" | sha256sum --check
+
+# Install kubectl
+sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+
+# Check installation
+
+kubectl version --client
+
+# Output:
+#
+# Client Version: v1.34.2
+# Kustomize Version: v5.7.1
+```
+
+## Use Windows Terminal
+
+Create Terminal Profile for connecting to created VM through SSH
+
+```json
+// Open Terminal Settings > Open Json file
+// Copy fallowing code to { "profiles" : "list" : [ placeItHere ]}
+{
+    "commandline": "%SystemRoot%\\System32\\WindowsPowerShell\\v1.0\\powershell.exe ssh -p 3022 vbox@127.0.0.10",
+    "guid": "{9f0ded21-c8e5-495f-afc8-74fe7062a17a}",
+    "hidden": false,
+    "name": "SSH ubuntu-24-server-minikube"
+}
+```
