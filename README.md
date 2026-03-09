@@ -10,8 +10,6 @@ Current repository contains my progress of learning Kubernetes
 
 - [Overview](./docs/AnOverview.md) contains initial information about Kubernetes
 - [Topics to cover](./docs/ATopics.md) contains plan for education
-- [Minikube VM Setup](./docs/Minikube.VM.md)
-- [Minikube Docs](./docs/Minikube.Docs.md)
 - [Minikube](./docs/Minikube.md)
 
 ## Glossary

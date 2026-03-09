@@ -7,12 +7,41 @@ Resources:
 - [Docker windows CLI releases](https://download.docker.com/win/static/stable/x86_64/)
 - [Docker-Compose windows CLI releases](https://github.com/docker/compose/releases)
 
-First Install [VirtualBox](https://download.virtualbox.org/virtualbox/7.2.4/VirtualBox-7.2.4-170995-Win.exe)  
+## Install VirtualBox
+
+Download and install [VirtualBox](https://download.virtualbox.org/virtualbox/7.2.4/VirtualBox-7.2.4-170995-Win.exe)
+
+**Optional**: set env variable for getting access to virtualbox CLI capabilities.
+Use current user scope (do not want to set Machine scope just to keep things isolated and clean).
+
+```powershell
+[Environment]::SetEnvironmentVariable("Path", "$($env:path);C:\Program Files\Oracle\VirtualBox", [System.EnvironmentVariableTarget]::User)
+```
+
+## Install Ubuntu VM
+
 Download [Ubuntu Server 24.04.3 LTS 3GB](https://mirrors.vinters.com/ubuntu-releases/24.04.3/ubuntu-24.04.3-live-server-amd64.iso)
 
-Create virtual machine:
+Using virtualbox UI create virtual machine and install ubuntu server.  
+Current setup expects to have 4gb ram, and 4 cpu cores (it should be enough for minikube).
+
+> Virtualbox has CLI that can do any VM manipulations, but for simplicity we are not using it here.
 
 ## Configure Nat Network
+
+Configure VM network in a way to have access to VM through SSH, and also for VM to have internet connection.
+
+Expected VM lan configuration:
+
+- Loopback address for VM: `127.0.0.10` (yuo can choose any loopback address)
+- Loopback port for VM SSH: `3022`
+- VM IP address: `10.0.2.3*`
+
+```bash
+# linux VM
+# VM IP address may be checked on VM host by
+sudo ip address
+```
 
 [VirtualBox Network Documentation](https://www.virtualbox.org/manual/ch06.html)
 
@@ -24,26 +53,42 @@ Create virtual machine:
 | NAT | + | Port forward | – | + | Port forward |
 | NATservice | + | Port forward | + | + | Port forward |
 
-Loopback address for VM: **127.0.0.10**  
-Loopback port for VM SSH: **3022**  
-VM IP address: **10.0.2.3**
+Create new NAT Network:
 
-```bash
-# Bash VM
-# VM IP address may be checked on VM host by
-sudo ip address
-```
+- name: `NatMinikube`
+- ip: `10.0.2.0/24`
+
+Add port forwarding for SSH connection to VM (port forwarding should be added to **NatMinikube** network):
+
+- name: `SSH Minikube`
+- protocol: `TCP` (ssh traffic)
+- host ip: `127.0.0.10` (can be any loopback ip, this config will allow only this ip to forward requests to VM)
+- host port: `3022` (use `127.0.0.10:3022` to create SSH connections to VM)
+- guest ip: `10.0.2.3` (ip address assigned to VM network adapter by virtualbox, can by checked on VM by `sudo ip address`)
+- guest port: `22` (SSH server listen to `22` port inside VM)
+
+Configure VM to use `NatMinikube` network:
+
+- go to VM `Settings > Network`
+- set `Attach To` = `NAT Network`
+- set `Name` = `NatMinikube`
 
 ## Configure SSH Connection
 
-First check (or install) SSH on Linux VM
+First we need to configure VM to accept SSH connection (expect to have configured NAT Network at this point).
+
+Check if SSH already installed on VM
 
 ```bash
-# Bash VM
+# linux VM
 # First connect to VM CLI and check if ssh installed
 sudo systemctl status ssh
+```
 
-# Install SSH (if nessecary)
+Install SSH server to VM (when it is missing)
+
+```bash
+# Install SSH (if necessary)
 sudo apt update
 sudo apt install openssh-server
 
@@ -51,24 +96,31 @@ sudo apt install openssh-server
 sudo systemctl enable ssh --now
 ```
 
-Check connection from host machine
+Check connection from host machine (when SSH is not configured - CLI ask for VM user password).
+
+> If any error occurs during the check - try to find any mismatches in Nat network port forwarding configuration (maybe ip address of VM does not match port forwarding configuration)
 
 ```powershell
-# Powershell Host
-# Will ask for user password
+# windows Host
 ssh -p 3022 vbox@127.0.0.10
 ```
 
-Generate SSH key pair for VM
+**In order to avoid password prompt for each CLI connection to VM** - lets generate SSH key on windows host,
+and copy public key VM.
 
-SSH key name: **id_ed25519_vm_vbox**  
-SSH public key name: **id_ed25519_vm_vbox.pub**  
+- generate SSH key pair on windows host (use CLI tool `ssh-keygen`)
+- configure windows host to use generated private key for VM ssh connections (`~/.ssh/config` file may have multiple configurations, do not delete existed settings),
+- copy public key to VM `~/.ssh/authorized_keys`.
+- test connection (if configured correctly should not ask for user password)
+
+SSH key name: `id_ed25519_vm_vbox`  
+SSH public key name: `id_ed25519_vm_vbox.pub`  
 
 ```powershell
-# Powershell Host
-# Navigate to your SSH directry
+# windows Host
+# Navigate to your SSH directory
 cd ~/.ssh
-# Generete new SSH key with file name id_ed25519_vm_vbox (password is optional, leave empty if not needed)
+# Generate new SSH key with file name id_ed25519_vm_vbox (password is optional, leave empty if not needed)
 ssh-keygen -t ed25519 -C "vbox" -f id_ed25519_vm_vbox
 
 # Configure to use id_ed25519_vm_vbox key for VM
@@ -86,16 +138,19 @@ ssh -p 3022 vbox@127.0.0.10 "mkdir -p ~/.ssh && chmod 700 ~/.ssh && echo '$(Get-
 ssh -p 3022 vbox@127.0.0.10
 ```
 
-## Install docker on windows host (optional)
+## Install docker on windows Host (optional)
 
-Install docker on host windows machine (not nessecary when docker already installed).
+Install docker on host windows machine (not necessary when docker already installed).
+Windows docker CLI allows to access and observe docker images and container on linux VM (and any other place, if configured).
+
 Check for latest version:
-[Docker windows CLI releases](https://download.docker.com/win/static/stable/x86_64/),
-[Docker-Compose windows CLI releases](https://github.com/docker/compose/releases)
+
+- [Docker windows CLI releases](https://download.docker.com/win/static/stable/x86_64/),
+- [Docker-Compose windows CLI releases](https://github.com/docker/compose/releases)
 
 ```powershell
-# Powershell Host
-# Intall docker CLI on host windows machine
+# windows Host
+# Install docker CLI on host windows machine
 # Search for latest version at https://download.docker.com/win/static/stable/x86_64/
 curl.exe -o docker.zip -LO https://download.docker.com/win/static/stable/x86_64/docker-29.0.4.zip
 Expand-Archive docker.zip -DestinationPath "C:\"
@@ -104,16 +159,17 @@ Expand-Archive docker.zip -DestinationPath "C:\"
 # Search for latest version at https://github.com/docker/compose/releases
 Invoke-WebRequest "https://github.com/docker/compose/releases/download/v2.5.0/docker-compose-Windows-x86_64.exe" -UseBasicParsing -OutFile C:\docker\docker-compose.exe
 
-# Update env Path to containe docker command
+# Update env Path to contain docker command for current machine
 [Environment]::SetEnvironmentVariable("Path", "$($env:path);C:\\docker", [System.EnvironmentVariableTarget]::Machine)
-$env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine")
+# Update path cor current session
+$env:Path = [System.Environment]::GetEnvironmentVariable("Path")
 ```
 
-In case windows images are required - it is possible to configure windows docker service to run
+**Optional:** In case windows images are required - it is possible to configure windows docker service to run
 
 ```powershell
-# Powershell Host
-# Create docker service configureation
+# windows Host
+# Create docker service configuration
 # See https://learn.microsoft.com/en-us/virtualization/windowscontainers/manage-docker/configure-docker-daemon
 echo '{"hosts": ["tcp://0.0.0.0:2375", "npipe://"]}' >> C:\\ProgramData\docker\\config\\daemon.json
 dockerd --register-service
@@ -123,12 +179,12 @@ Start-Service docker
 docker context create win --default-stack-orchestrator=swarm --docker host=tcp://127.0.0.1:2375 --description "Windows tcp://localhost:2375"
 ```
 
-## Install Docker for Linux VM
+## Install Docker for linux VM
 
-VM Configuration
+Required for minikube to run docker containers
 
 ```bash
-# Bash VM
+# linux VM
 # Add Docker official GPG key:
 sudo apt update
 sudo apt install ca-certificates curl
@@ -162,10 +218,10 @@ sudo usermod -aG docker $USER && newgrp docker
 
 ## Configure Docker SSH Connection
 
-VM Configuration
+Configure VM docker daemon do accept connections form unix socket (from inside of VM itself), and SSH connections (from windows host)
 
 ```bash
-# Bash VM
+# linux VM
 # Configure Docker to accept Unix socket (form insed VM) and ssh connections (from network)
 sudo tee /etc/docker/daemon.json <<EOF
 {
@@ -174,20 +230,22 @@ sudo tee /etc/docker/daemon.json <<EOF
 EOF
 ```
 
-Configure host docker CLI to connect VM docker through SSH
+Configure windows host docker CLI to connect VM docker through SSH
 
 ```powershell
-# Powershell Host
+# windows Host
 # Create context to access VM docker
 docker context create linux-minikube --description "Docker in VM minikube" --docker "host=ssh://vbox@127.0.0.10:3022"
 ```
 
 ## Install minikube
 
+Installing minikube to linux VM
+
 [Check available releases](https://github.com/kubernetes/minikube/releases)
 
 ```bash
-# Bash VM
+# linux VM
 # For latest version use: https://github.com/kubernetes/minikube/releases/latest/download/minikube-linux-amd64
 curl -LO https://github.com/kubernetes/minikube/releases/download/v1.37.0/minikube-linux-amd64
 
@@ -216,7 +274,7 @@ You must use a kubectl version that is within one minor version difference of yo
 Use version `v1.34.2`
 
 ```bash
-# Bash VM
+# linux VM
 # Download binaries
 curl -LO https://dl.k8s.io/release/v1.34.2/bin/linux/amd64/kubectl
 
@@ -244,7 +302,7 @@ kubectl version --client
 ### (Optional) Install latest stable version
 
 ```bash
-# Bash VM
+# linux VM
 # Download binaries
 curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
 

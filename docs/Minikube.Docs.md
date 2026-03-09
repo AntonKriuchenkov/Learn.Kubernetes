@@ -24,8 +24,6 @@ minikube start --driver=docker
 
 **(it also has old flag `--vm-driver` with the same meaning but is not recomended since it is deprecated)**
 
-> TODO: create .md file for each driver
-
 ### For Linux
 
 | Command | Documentation | Description |
